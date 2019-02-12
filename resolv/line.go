@@ -87,6 +87,7 @@ func (l *Line) IntersectionPoints(other Shape) []IntersectionPoint {
 	if ok {
 
 		side := NewLine(r.X, r.Y, r.X, r.Y+r.H)
+		side.SetData(other.GetData())
 		intersections = append(intersections, l.IntersectionPoints(side)...)
 
 		side.Y = r.Y + r.H
