@@ -1,3 +1,6 @@
+# This Fork
+
+This is my fork of SolarLune's resolv, it may completely change certain functionality to fit the needs of my game. Please use the upstream branch for all practical purposes.
 
 # resolv
 
