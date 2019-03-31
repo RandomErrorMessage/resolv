@@ -4,13 +4,9 @@ This is my fork of SolarLune's resolv, it may completely change certain function
 
 # resolv
 
-![intersectiontests](https://user-images.githubusercontent.com/4733521/51143628-ce806400-1803-11e9-93b0-2c7a3a78f282.gif)
+![Bouncing](https://thumbs.gfycat.com/UnhappySadEquine-size_restricted.gif)
 
-![multishapestest2](https://user-images.githubusercontent.com/4733521/47263447-bde77880-d4b6-11e8-8472-b68ffe114bc9.gif)
-
-![smoove](https://user-images.githubusercontent.com/4733521/47263453-bfb13c00-d4b6-11e8-9b3a-6b2c6afa1b6a.gif)
-
-![resolv_v02 gif](https://user-images.githubusercontent.com/4733521/46297121-c18b7d80-c550-11e8-9854-728e0aa7ab36.gif)
+[Other gifs](https://gfycat.com/@solarlune/collections/LxBK2KGU/resolv-gfys)
 
 [GoDocs](https://godoc.org/github.com/SolarLune/resolv/resolv)
 
@@ -64,16 +60,18 @@ func Update() {
     // that stores a value of 2.
     dx := 2
 
-    // Here, we check to see if there's a collision should shape1 try to move to the right by 10 pixels. The Resolve()
-    // functions return a Collision object that has information about whether the attempted movement would work,
-    // and whether it resulted in a collision or not.
+    // Here, we check to see if there's a collision should shape1 try to move to the right by the delta movement. The Resolve()
+    // functions return a Collision object that has information about whether the attempted movement resulted in a collision 
+    // or not.
     resolution := resolv.Resolve(shape1, shape2, dx, 0)
 
     if resolution.Colliding() {
         
         // If there was a collision, then shape1 couldn't move fully to the right. It came into contact with shape2,
-        // and the variable collision now holds a Collision object with helpful information, like how far it was able to move.
-        // Move the shape over to the right by the distance that it can to come into full contact with shape2.
+        // and the variable "resolution" now holds a Collision struct with helpful information, like how far to move to be touching.
+        
+        // Here we just move the shape over to the right by the distance reported by the Collision struct so it'll come into contact 
+        // with shape2.
         shape1.X += resolution.ResolveX
 
     } else {
@@ -85,7 +83,11 @@ func Update() {
 
     // We can also do collision testing only pretty simply:
 
-    collision := shape1.IsColliding(shape2)
+    colliding := shape1.IsColliding(shape2)
+
+    if colliding {
+        fmt.Println("WHOA! shape1 and shape2 are colliding.")
+    }
 
 }
 
@@ -95,18 +97,18 @@ func Update() {
 
 This is fine for simple testing, but if you have even a slightly more complex game with a lot more Shapes, then you would have to check each Shape against each other Shape. This is a bit awkward for the developer to code, so I also added Spaces. 
 
-A Space represents a container for Shapes to exist in and test against. This way, the fundamentals are the same, but it should scale up more easily, since you don't have to do manual for checking everywhere you want to test a Shape against others. 
+A Space represents a container for Shapes to exist in and test against. The fundamentals are the same, but it scales up more easily, since you don't have to do manual checking everywhere you want to test a Shape against any others. 
 
-A Space is just a pointer to a slice of Shapes, so feel free to use as many as you need to (i.e. you could split up a level into multiple Spaces, or have everything in one Space if it works for your game). Spaces being pointers to slices means that they can also be filtered out as necessary to easily test a smaller selection of Shapes when desired.
+A Space is just a pointer to a slice of Shapes, so feel free to use as many as you need to. You could split up a level into multiple Spaces, or have everything in one Space if it works for your game. Spaces also contain functions to filter them out as necessary to easily test a smaller selection of Shapes when desired.
 
 Here's an example using a Space to check one Shape against others:
 
 ```go
 
-// Here, in the game's init loop...
-
-var space resolv.Space
+var space *resolv.Space
 var playerRect *resolv.Rectangle
+
+// Here, in the game's init loop...
 
 func Init() {
 
@@ -116,35 +118,28 @@ func Init() {
     // Create one rectangle - we'll say this one represents our player.
     playerRect = resolv.NewRectangle(40, 40, 16, 16)
 
-    // Note that we don't have to add the Player Rectangle to the Space; this is only if we want it 
+    // Note that we don't HAVE to add the Player Rectangle to the Space; this is only if we want it 
     // to also be checked for collision testing and resolution within the Space by other Shapes.
-    space.AddShape(playerRect)
+    space.Add(playerRect)
 
     // Now we're going to create some more Rectangles to represent level bounds.
-    s := resolv.NewRectangle(0, 0, 16, 240)
-
-    // We set tags on the Rectangles to allow us to more easily check for collisions.
-    s.SetTags("solid")
     
-    // Then we add the Shape to the Space.
-    space.AddShape(s)
+
+    // We can also add multiple shapes in a single Add() call...
+
+    space.Add(resolv.NewRectangle(16, 0, 320, 16),
+        resolv.NewRectangle(16, 240-16, 320, 16),
+        resolv.NewRectangle(16, 240-16, 320, 16),
+        resolv.NewRectangle(320-16, 16, 16, 240-16)
+    )
 
     /* Note that this is a bit verbose - in reality, you'd probably be loading the necessary data 
     to construct the Shapes by looping through a for-loop when reading data in from a level format,
     like Tiled's TMX format. Anyway...*/
 
-    s = resolv.NewRectangle(16, 0, 320, 16)
-    s.SetTags("solid")
-    space.AddShape(s)
-
-    s = resolv.NewRectangle(16, 240-16, 320, 16)
-    s.SetTags("solid")
-    space.AddShape(s)
+    // A Space also has the ability to easily add tags to its Shapes.
+    space.AddTags("solid")
     
-    s = resolv.NewRectangle(320-16, 16, 16, 240-16)
-    s.SetTags("solid")
-    space.AddShape(s)
-
 }
 
 func Update() {
@@ -156,15 +151,15 @@ func Update() {
     dy := 4
 
     /* To check for Shapes with a specific tag, we can filter out the Space they exist 
-    in with either the Space.FilterByTags() or Space.Filter functions. Space.Filter() 
+    in with either the Space.FilterByTags() or Space.Filter() functions. Space.Filter() 
     allows us to provide a function to filter out the Shapes; Space.FilterByTags() 
-    takes the tag names themselves to filter out the Shapes by. */
+    takes tags themselves to filter out the Shapes by. */
 
     // This gives us just the Shapes with the "solid" tag.
     solids := space.FilterByTags("solid")
 
-    // You can provide more tags in the same function, as well. (i.e. 
-    // others := space.FilterByTags("solid", "danger", "zone"))
+    // You can provide multiple tags in the same function to filter by all of them at the same
+    // time, as well. ( i.e. deathZones := space.FilterByTags("danger", "zone") )
 
     /* Now we check each axis individually against the Space (or, in other words, against
     all Shapes conatined within the Space). This is done to allow a collision on one 
@@ -208,18 +203,18 @@ func Init() {
     ship = resolv.NewSpace()
     
     // Construct the ship!
-    ship.AddShape(
+    ship.Add(
         resolv.NewRectangle(0, 0, 16, 16), 
         resolv.NewLine(16, 0, 32, 16), 
         resolv.NewLine(32, 16, 16, 16))
 
     // Add the Ship to the game world!
-    world.AddShape(ship)
+    world.Add(ship)
 
     // Make something to dodge!
-    bullet := resolv.NewRectangle(64, 16, 2, 2)
+    bullet := resolv.NewRectangle(64, 8, 2, 2)
     bullet.SetTags("bullet")
-    world.AddShape(bullet)
+    world.Add(bullet)
 
 }
 
@@ -248,16 +243,18 @@ Welp, that's about it. If you want to see more info, feel free to examine the ma
 
 ## Dependencies?
 
-For the actual package, there are no external dependencies. resolv just uses the built-in "fmt" and "math" packages.
+For using resolv with your projects, there are no external dependencies. resolv just uses the built-in "fmt" and "math" packages.
 
-For the tests, resolv requires veandco's sdl2 port to create the window, handle input, and draw the shapes.
+For the resolv tests, resolv requires raylib-go to handle input and draw the screen.
 
 ## Shout-out Time!
 
+Massive thanks to the developer of raylib; it's an awesome framework, and simplifies things CONSIDERABLY. 
+
+Thanks to gen2brain for maintaining raylib-go, as well!
+
 Props to whoever made arcadepi.ttf! It's a nice font.
 
-Thanks a lot to the SDL2 team for development.
+Thanks a lot to the SDL2 team for development, and thanks to veandco for maintaining the Golang SDL2 port, as well!
 
-Thanks to veandco for maintaining the Golang SDL2 port, as well!
-
-Thanks to the people who stop by on my stream - they helped out a lot with a couple of the technical aspects of getting Go to do what I needed to, haha.
+Thanks to the people who stopped by on my stream - they helped out a lot with a couple of the technical aspects of getting Go to do what I needed to, haha.

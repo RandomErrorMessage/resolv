@@ -18,17 +18,16 @@ func NewLine(x, y, x2, y2 int32) *Line {
 	l.Y = y
 	l.X2 = x2
 	l.Y2 = y2
-	l.Collideable = true
 	return l
 }
 
-// BUG(SolarLune): Line.IsColliding() and Line.IntersectionPoints() doesn't work with Circles.
-// BUG(SolarLune): Line.IsColliding() and Line.IntersectionPoints() fail if testing two lines that intersect along the exact same slope.
+// BUG(SolarLune): Line.IsColliding() and Line.GetIntersectionPoints() doesn't work with Circles.
+// BUG(SolarLune): Line.IsColliding() and Line.GetIntersectionPoints() fail if testing two lines that intersect along the exact same slope.
 
 // IsColliding returns if the Line is colliding with the other Shape. Currently, Circle-Line collision is missing.
 func (l *Line) IsColliding(other Shape) bool {
 
-	intersectionPoints := l.IntersectionPoints(other)
+	intersectionPoints := l.GetIntersectionPoints(other)
 
 	colliding := len(intersectionPoints) > 0
 
@@ -47,20 +46,16 @@ type IntersectionPoint struct {
 	Shape Shape
 }
 
-// IntersectionPoints returns the intersection points of a Line with another Shape as an array of arrays, composed of X and Y position int32s.
-// The returned list of intersection points are always sorted in order of distance from the start of the casting Line to the end.
+// GetIntersectionPoints returns the intersection points of a Line with another Shape as an array of IntersectionPoints.
+// The returned list of intersection points are always sorted in order of distance from the start of the casting Line to each intersection.
 // Currently, Circle-Line collision is missing.
-func (l *Line) IntersectionPoints(other Shape) []IntersectionPoint {
+func (l *Line) GetIntersectionPoints(other Shape) []IntersectionPoint {
 
 	intersections := []IntersectionPoint{}
 
-	if !l.Collideable || !other.IsCollideable() {
-		return intersections
-	}
+	switch b := other.(type) {
 
-	b, ok := other.(*Line)
-
-	if ok {
+	case *Line:
 
 		det := (l.X2-l.X)*(b.Y2-b.Y) - (b.X2-b.X)*(l.Y2-l.Y)
 
@@ -79,50 +74,32 @@ func (l *Line) IntersectionPoints(other Shape) []IntersectionPoint {
 			}
 
 		}
-
-	}
-
-	r, ok := other.(*Rectangle)
-
-	if ok {
-
-		side := NewLine(r.X, r.Y, r.X, r.Y+r.H)
+	case *Rectangle:
+		side := NewLine(b.X, b.Y, b.X, b.Y+b.H)
 		side.SetData(other.GetData())
-		intersections = append(intersections, l.IntersectionPoints(side)...)
+		intersections = append(intersections, l.GetIntersectionPoints(side)...)
 
-		side.Y = r.Y + r.H
-		side.X2 = r.X + r.W
-		side.Y2 = r.Y + r.H
-		intersections = append(intersections, l.IntersectionPoints(side)...)
+		side.Y = b.Y + b.H
+		side.X2 = b.X + b.W
+		side.Y2 = b.Y + b.H
+		intersections = append(intersections, l.GetIntersectionPoints(side)...)
 
-		side.X = r.X + r.W
-		side.Y2 = r.Y
-		intersections = append(intersections, l.IntersectionPoints(side)...)
+		side.X = b.X + b.W
+		side.Y2 = b.Y
+		intersections = append(intersections, l.GetIntersectionPoints(side)...)
 
-		side.Y = r.Y
-		side.X2 = r.X
-		side.Y2 = r.Y
-		intersections = append(intersections, l.IntersectionPoints(side)...)
-
-	}
-
-	_, ok = other.(*Circle)
-
-	if ok {
-
-		// return false
-
+		side.Y = b.Y
+		side.X2 = b.X
+		side.Y2 = b.Y
+		intersections = append(intersections, l.GetIntersectionPoints(side)...)
+	case *Space:
+		for _, shape := range *b {
+			intersections = append(intersections, l.GetIntersectionPoints(shape)...)
+		}
+	case *Circle:
 		// 	TO-DO: Add this later, because this is kinda hard and would necessitate some complex vector math that, for whatever
 		//  reason, is not even readily available in a Golang library as far as I can tell???
-
-	}
-
-	sp, ok := other.(*Space)
-
-	if ok {
-		for _, shape := range *sp {
-			intersections = append(intersections, l.IntersectionPoints(shape)...)
-		}
+		break
 	}
 
 	// fmt.Println("WARNING! Object ", other, " isn't a valid shape for collision testing against Line ", l, "!")

@@ -5,10 +5,10 @@ package resolv
 type Shape interface {
 	IsColliding(Shape) bool
 	WouldBeColliding(Shape, int32, int32) bool
-	IsCollideable() bool
-	SetCollideable(bool)
 	GetTags() []string
-	SetTags(...string)
+	ClearTags()
+	AddTags(...string)
+	RemoveTags(...string)
 	HasTags(...string) bool
 	GetData() interface{}
 	SetData(interface{})
@@ -18,22 +18,46 @@ type Shape interface {
 }
 
 // BasicShape isn't to be used directly; it just has some basic functions and data, common to all structs that embed it, like
-// position and collide-ability. It is embedded in other Shapes.
+// position and tags. It is embedded in other Shapes.
 type BasicShape struct {
-	X, Y        int32
-	tags        []string
-	Collideable bool
-	Data        interface{}
+	X, Y int32
+	tags []string
+	Data interface{}
 }
 
-// GetTags returns the tags on the Shape.
+// GetTags returns a reference to the the string array representing the tags on the BasicShape.
 func (b *BasicShape) GetTags() []string {
 	return b.tags
 }
 
-// SetTags sets the tags on the Shape.
-func (b *BasicShape) SetTags(tags ...string) {
-	b.tags = tags
+// AddTags adds the specified tags to the BasicShape.
+func (b *BasicShape) AddTags(tags ...string) {
+	if b.tags == nil {
+		b.tags = []string{}
+	}
+	b.tags = append(b.tags, tags...)
+}
+
+// RemoveTags removes the specified tags from the BasicShape.
+func (b *BasicShape) RemoveTags(tags ...string) {
+
+	for _, t := range tags {
+
+		for i := len(b.tags) - 1; i >= 0; i-- {
+
+			if t == b.tags[i] {
+				b.tags = append(b.tags[:i], b.tags[i+1:]...)
+			}
+
+		}
+
+	}
+
+}
+
+// ClearTags clears the tags active on the BasicShape.
+func (b *BasicShape) ClearTags() {
+	b.tags = []string{}
 }
 
 // HasTags returns true if the Shape has all of the tags provided.
@@ -56,16 +80,6 @@ func (b *BasicShape) HasTags(tags ...string) bool {
 	}
 
 	return hasTags
-}
-
-// IsCollideable returns whether the Shape is currently collide-able or not.
-func (b *BasicShape) IsCollideable() bool {
-	return b.Collideable
-}
-
-// SetCollideable sets the Shape's collide-ability.
-func (b *BasicShape) SetCollideable(on bool) {
-	b.Collideable = on
 }
 
 // GetData returns the data on the Shape.

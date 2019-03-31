@@ -16,8 +16,8 @@ func NewSpace() *Space {
 	return sp
 }
 
-// AddShape adds the designated Shapes to the Space. You cannot add the Space to itself.
-func (sp *Space) AddShape(shapes ...Shape) {
+// Add adds the designated Shapes to the Space. You cannot add the Space to itself.
+func (sp *Space) Add(shapes ...Shape) {
 	for _, shape := range shapes {
 		if shape == sp {
 			panic(fmt.Sprintf("ERROR! Space %s cannot add itself!", shape))
@@ -26,8 +26,8 @@ func (sp *Space) AddShape(shapes ...Shape) {
 	}
 }
 
-// RemoveShape removes the designated Shapes from the Space.
-func (sp *Space) RemoveShape(shapes ...Shape) {
+// Remove removes the designated Shapes from the Space.
+func (sp *Space) Remove(shapes ...Shape) {
 
 	for _, shape := range shapes {
 
@@ -79,7 +79,7 @@ func (sp *Space) GetCollidingShapes(shape Shape) *Space {
 	for _, other := range *sp {
 		if other != shape {
 			if shape.IsColliding(other) {
-				newSpace.AddShape(other)
+				newSpace.Add(other)
 			}
 		}
 	}
@@ -116,7 +116,7 @@ func (sp *Space) Filter(filterFunc func(Shape) bool) *Space {
 	subSpace := NewSpace()
 	for _, shape := range *sp {
 		if filterFunc(shape) {
-			subSpace.AddShape(shape)
+			subSpace.Add(shape)
 		}
 	}
 	return subSpace
@@ -129,6 +129,16 @@ func (sp *Space) FilterByTags(tags ...string) *Space {
 			return true
 		}
 		return false
+	})
+}
+
+// FilterOutByTags filters a Space out, creating a new Space that has just the Shapes that don't have all of the specified tags.
+func (sp *Space) FilterOutByTags(tags ...string) *Space {
+	return sp.Filter(func(s Shape) bool {
+		if s.HasTags(tags...) {
+			return false
+		}
+		return true
 	})
 }
 
@@ -179,22 +189,6 @@ func (sp *Space) WouldBeColliding(other Shape, dx, dy int32) bool {
 
 }
 
-// SetCollideable sets collideability on all Shapes within the Space.
-func (sp *Space) SetCollideable(collideable bool) {
-	for _, shape := range *sp {
-		shape.SetCollideable(collideable)
-	}
-}
-
-// IsCollideable returns the collideability of the first Shape within the Space. If there are no Shapes within the Space,
-// it returns false.
-func (sp *Space) IsCollideable() bool {
-	if len(*sp) > 0 {
-		return (*sp)[0].IsCollideable()
-	}
-	return false
-}
-
 // GetTags returns the tag list of the first Shape within the Space. If there are no Shapes within the Space,
 // it returns an empty array of string type.
 func (sp *Space) GetTags() []string {
@@ -204,10 +198,24 @@ func (sp *Space) GetTags() []string {
 	return []string{}
 }
 
-// SetTags sets the provided tags on all Shapes contained within the Space.
-func (sp *Space) SetTags(tags ...string) {
+// AddTags sets the provided tags on all Shapes contained within the Space.
+func (sp *Space) AddTags(tags ...string) {
 	for _, shape := range *sp {
-		shape.SetTags(tags...)
+		shape.AddTags(tags...)
+	}
+}
+
+// RemoveTags removes the provided tags from all Shapes contained within the Space.
+func (sp *Space) RemoveTags(tags ...string) {
+	for _, shape := range *sp {
+		shape.RemoveTags(tags...)
+	}
+}
+
+// ClearTags removes all tags from all Shapes within the Space.
+func (sp *Space) ClearTags() {
+	for _, shape := range *sp {
+		shape.ClearTags()
 	}
 }
 
@@ -280,12 +288,12 @@ func (sp *Space) Move(dx, dy int32) {
 	}
 }
 
-// Length returns the length of the Space. This is a convenience function.
+// Length returns the length of the Space (number of Shapes contained within the Space). This is a convenience function, standing in for len(*space).
 func (sp *Space) Length() int {
 	return len(*sp)
 }
 
-// Get allows you to get a Shape by index from the Space easily. This is a convenience function.
+// Get allows you to get a Shape by index from the Space easily. This is a convenience function, standing in for (*space)[index].
 func (sp *Space) Get(index int) Shape {
 	return (*sp)[index]
 }
